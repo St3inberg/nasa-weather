@@ -85,6 +85,8 @@ class MarsWeatherUpdateCoordinator(DataUpdateCoordinator):
                 params=params,
                 timeout=aiohttp.ClientTimeout(total=10),
             ) as response:
+                if response.status in (400, 401, 403):
+                    raise UpdateFailed("Invalid NASA API key")
                 response.raise_for_status()
                 data = await response.json()
 

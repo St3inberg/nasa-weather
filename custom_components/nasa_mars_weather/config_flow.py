@@ -57,13 +57,17 @@ class NasaMarsWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
                 session = async_get_clientsession(self.hass)
                 async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                    response.raise_for_status()
-                    data = await response.json()
+                    if response.status in (400, 401, 403):
+                        errors["api_key"] = "invalid_api_key"
+                    else:
+                        response.raise_for_status()
+                        data = await response.json()
 
-                if not _is_valid_mars_payload(data):
-                    errors["base"] = "invalid_response"
-                else:
-                    return self.async_create_entry(title="NASA Mars Weather", data=user_input)
+                if not errors:
+                    if not _is_valid_mars_payload(data):
+                        errors["base"] = "invalid_response"
+                    else:
+                        return self.async_create_entry(title="NASA Mars Weather", data=user_input)
 
             except aiohttp.ClientError as err:
                 errors["base"] = "cannot_connect"
