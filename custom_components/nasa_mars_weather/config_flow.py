@@ -2,7 +2,7 @@
 
 import logging
 import voluptuous as vol
-import requests
+import aiohttp
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -32,21 +32,20 @@ class NasaMarsWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "ver": "1.0",
                     "api_key": api_key,
                 }
-                response = requests.get(url, params=params, timeout=10)
-                response.raise_for_status()
-                data = response.json()
+                session = async_get_clientsession(self.hass)
+                async with session.get(url, params=params, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    response.raise_for_status()
+                    data = await response.json()
 
                 if not data or "av_t" not in data:
                     errors["base"] = "invalid_response"
                 else:
                     return self.async_create_entry(title="NASA Mars Weather", data=user_input)
 
-            except requests.exceptions.HTTPError as err:
-                if response.status_code == 400:
-                    errors["api_key"] = "invalid_api_key"
-                else:
-                    errors["base"] = "cannot_connect"
-            except requests.exceptions.RequestException:
+            except aiohttp.ClientError as err:
+                errors["base"] = "cannot_connect"
+            except Exception as err:
+                _LOGGER.error(f"Unexpected error validating API key: {err}")
                 errors["base"] = "cannot_connect"
 
         data_schema = vol.Schema(
