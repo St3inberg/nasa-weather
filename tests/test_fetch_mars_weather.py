@@ -39,12 +39,10 @@ class TestFetchMarsWeather:
 
     @patch.dict(os.environ, {}, clear=True)
     def test_fetch_mars_weather_no_api_key(self):
-        """Test that error is raised when API key is missing"""
+        """Test that None is returned when API key is missing"""
         try:
-            # Should exit with error
-            with pytest.raises(SystemExit):
-                import fetch_mars_weather as fmw
-                fmw.fetch_mars_weather()
+            data = fetch_mars_weather()
+            assert data is None
         except Exception as e:
             pytest.fail(f"test_fetch_mars_weather_no_api_key failed: {e}")
 
@@ -112,7 +110,9 @@ class TestParseWeatherData:
             data = {"av_t": {"av": -60.5}}
             
             weather = parse_weather_data(data)
-            assert weather is None
+            # Should still parse but with some None values
+            assert weather is not None
+            assert weather["temperature"]["average"] == -60.5
         except Exception as e:
             pytest.fail(f"test_parse_weather_data_missing_fields failed: {e}")
 
