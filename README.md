@@ -2,7 +2,43 @@
 
 Display real-time Mars weather data from NASA's InSight Mars Weather Service in Home Assistant.
 
-## Setup
+## Installation
+
+### Method 1: HACS (Recommended)
+
+1. Open Home Assistant and go to **HACS**
+2. Click **Integrations**
+3. Click **Explore & Download Repositories**
+4. Search for **NASA Mars Weather**
+5. Click **Download**
+6. Restart Home Assistant
+7. Go to **Settings** → **Devices & Services** → **Create Automation**
+8. Click **Create Integration**
+9. Search for **NASA Mars Weather**
+10. Enter your NASA API key and click **Submit**
+
+### Method 2: Manual Installation
+
+1. Download the repository
+2. Copy `custom_components/nasa_mars_weather` to your Home Assistant `custom_components` folder
+3. Restart Home Assistant
+4. Go to **Settings** → **Devices & Services** → **Create Integration**
+5. Search for **NASA Mars Weather**
+6. Enter your NASA API key
+
+## Get Your NASA API Key
+
+Free API keys available at: https://api.nasa.gov/
+
+1. Go to https://api.nasa.gov/
+2. Fill out the form with your details
+3. You'll receive your API key via email
+
+## Configuration
+
+After installation, the integration will prompt you for your NASA API key in the Home Assistant UI. No manual configuration.yaml editing required!
+
+## Legacy Setup (Manual REST Sensor)
 
 ### 1. NASA API Key
 Your API key: `k0MCGBGFhynXvZSjGLRtgEEAYKaCZappSulH5dVM`

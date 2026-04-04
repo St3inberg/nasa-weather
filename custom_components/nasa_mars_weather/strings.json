@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configure NASA Mars Weather",
+        "description": "Enter your NASA API key to fetch Mars weather data.",
+        "data": {
+          "api_key": "API Key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to NASA API",
+      "invalid_api_key": "Invalid API key",
+      "invalid_response": "Invalid response from NASA API"
+    },
+    "abort": {
+      "already_configured": "Integration is already configured"
+    }
+  }
+}
