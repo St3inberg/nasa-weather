@@ -1,0 +1,100 @@
+# Home Assistant Configuration Example
+
+# This file shows how to integrate NASA Mars Weather into Home Assistant
+# Copy the relevant sections to your Home Assistant configuration.yaml
+
+# REST Integration for Mars Weather
+rest:
+  - resource: https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0&api_key=k0MCGBGFhynXvZSjGLRtgEEAYKaCZappSulH5dVM
+    name: "Mars Weather API"
+    scan_interval: 3600  # Update every hour
+    sensor:
+      # Temperature Sensors
+      - name: "Mars Avg Temperature"
+        unique_id: mars_avg_temp
+        unit_of_measurement: "°C"
+        device_class: temperature
+        value_template: "{{ value_json.av_t.av | round(1) }}"
+        
+      - name: "Mars Min Temperature"
+        unique_id: mars_min_temp
+        unit_of_measurement: "°C"
+        device_class: temperature
+        value_template: "{{ value_json.av_t.mn | round(1) }}"
+        
+      - name: "Mars Max Temperature"
+        unique_id: mars_max_temp
+        unit_of_measurement: "°C"
+        device_class: temperature
+        value_template: "{{ value_json.av_t.mx | round(1) }}"
+        
+      # Pressure Sensors
+      - name: "Mars Avg Pressure"
+        unique_id: mars_avg_pressure
+        unit_of_measurement: "Pa"
+        device_class: pressure
+        value_template: "{{ value_json.av_p.av | round(2) }}"
+        
+      - name: "Mars Min Pressure"
+        unique_id: mars_min_pressure
+        unit_of_measurement: "Pa"
+        value_template: "{{ value_json.av_p.mn | round(2) }}"
+        
+      - name: "Mars Max Pressure"
+        unique_id: mars_max_pressure
+        unit_of_measurement: "Pa"
+        value_template: "{{ value_json.av_p.mx | round(2) }}"
+        
+      # Wind Speed Sensors
+      - name: "Mars Avg Wind Speed"
+        unique_id: mars_avg_wind_speed
+        unit_of_measurement: "m/s"
+        value_template: "{{ value_json.av_ws.av | round(2) }}"
+        
+      - name: "Mars Min Wind Speed"
+        unique_id: mars_min_wind_speed
+        unit_of_measurement: "m/s"
+        value_template: "{{ value_json.av_ws.mn | round(2) }}"
+        
+      - name: "Mars Max Wind Speed"
+        unique_id: mars_max_wind_speed
+        unit_of_measurement: "m/s"
+        value_template: "{{ value_json.av_ws.mx | round(2) }}"
+        
+      # Wind Direction
+      - name: "Mars Wind Direction"
+        unique_id: mars_wind_direction
+        value_template: "{{ value_json.wd.most_common.compass_point }}"
+
+# Lovelace Dashboard Card Configuration
+# Add this to a Lovelace dashboard YAML:
+views:
+  - title: "Space Weather"
+    path: space-weather
+    cards:
+      - type: entities
+        title: "Mars Weather"
+        entities:
+          - entity: sensor.mars_avg_temperature
+            name: "Avg Temperature"
+          - entity: sensor.mars_min_temperature
+            name: "Min Temperature"
+          - entity: sensor.mars_max_temperature
+            name: "Max Temperature"
+          - entity: sensor.mars_avg_pressure
+            name: "Avg Pressure"
+          - entity: sensor.mars_avg_wind_speed
+            name: "Avg Wind Speed"
+          - entity: sensor.mars_wind_direction
+            name: "Prevailing Wind"
+
+# Alternative: Using automation to log Mars weather
+automation:
+  - alias: "Log Mars Weather"
+    trigger:
+      platform: time_pattern
+      hours: "/1"  # Every hour
+    action:
+      service: logger.log
+      data:
+        message: "Mars Temp: {{ state_attr('sensor.mars_avg_temperature', 'value') }}°C, Pressure: {{ state_attr('sensor.mars_avg_pressure', 'value') }}Pa"
