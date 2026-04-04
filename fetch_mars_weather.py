@@ -6,11 +6,16 @@ Fetches data from NASA's InSight Mars Weather Service
 
 import requests
 import json
+import os
 from datetime import datetime
 import sys
 
-API_KEY = "k0MCGBGFhynXvZSjGLRtgEEAYKaCZappSulH5dVM"
+API_KEY = os.environ.get("NASA_API_KEY")
 BASE_URL = "https://api.nasa.gov/insight_weather/"
+
+if not API_KEY:
+    print("Error: NASA_API_KEY environment variable not set", file=sys.stderr)
+    sys.exit(1)
 
 def fetch_mars_weather():
     """Fetch latest Mars weather data from NASA API"""

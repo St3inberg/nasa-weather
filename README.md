@@ -44,7 +44,7 @@ After installation, the integration will prompt you for your NASA API key in the
 ## Legacy Setup (Manual REST Sensor)
 
 ### 1. NASA API Key
-Your API key: `k0MCGBGFhynXvZSjGLRtgEEAYKaCZappSulH5dVM`
+Get your free API key at: https://api.nasa.gov/
 
 - **API Documentation**: https://api.nasa.gov/
 - **Mars Weather Endpoint**: `https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0&api_key={YOUR_API_KEY}`
@@ -55,7 +55,7 @@ Add the following to your Home Assistant `configuration.yaml`:
 
 ```yaml
 rest:
-  - resource: https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0&api_key=k0MCGBGFhynXvZSjGLRtgEEAYKaCZappSulH5dVM
+  - resource: https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0&api_key=YOUR_NASA_API_KEY_HERE
     scan_interval: 3600
     sensor:
       - name: "Mars Temperature"

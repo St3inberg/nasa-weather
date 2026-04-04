@@ -4,8 +4,9 @@
 # Copy the relevant sections to your Home Assistant configuration.yaml
 
 # REST Integration for Mars Weather
+# Replace YOUR_NASA_API_KEY_HERE with your actual NASA API key from https://api.nasa.gov/
 rest:
-  - resource: https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0&api_key=k0MCGBGFhynXvZSjGLRtgEEAYKaCZappSulH5dVM
+  - resource: https://api.nasa.gov/insight_weather/?feedtype=json&ver=1.0&api_key=YOUR_NASA_API_KEY_HERE
     name: "Mars Weather API"
     scan_interval: 3600  # Update every hour
     sensor:
