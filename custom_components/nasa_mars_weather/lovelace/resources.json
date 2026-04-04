@@ -1,0 +1,9 @@
+{
+  "resources": [
+    {
+      "url": "/custom_components/nasa_mars_weather/lovelace/mars-weather-card.js?v=1.0.0",
+      "type": "module",
+      "name": "Mars Weather Card"
+    }
+  ]
+}

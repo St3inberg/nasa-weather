@@ -41,6 +41,27 @@ Free API keys available at: https://api.nasa.gov/
 
 After installation, the integration will prompt you for your NASA API key in the Home Assistant UI. No manual configuration.yaml editing required!
 
+## 🎨 Mars Weather Card
+
+The integration includes a beautiful, Mars-themed custom Lovelace card that automatically displays your Mars weather data!
+
+### Using the Card
+
+Simply add this to your Home Assistant dashboard:
+
+```yaml
+type: custom:mars-weather-card
+entity: sensor.mars_avg_temperature
+```
+
+The card features:
+- 🔴 Mars-themed gradient background
+- 📊 Real-time weather display
+- 🎨 Beautiful glass-morphism design
+- 📱 Fully responsive layout
+
+For complete card documentation and examples, see [LOVELACE.md](LOVELACE.md)
+
 ## Legacy Setup (Manual REST Sensor)
 
 ### 1. NASA API Key

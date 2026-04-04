@@ -62,6 +62,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
+    # Register Lovelace resources for the custom card
+    try:
+        lovelace = hass.data.get("lovelace")
+        if lovelace:
+            lovelace.created_yaml_resources.add(
+                "/custom_components/nasa_mars_weather/lovelace/mars-weather-card.js"
+            )
+    except Exception as err:
+        _LOGGER.debug(f"Could not register Lovelace card: {err}")
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True

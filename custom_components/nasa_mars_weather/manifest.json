@@ -7,5 +7,14 @@
   "documentation": "https://github.com/St3inberg/nasa-weather",
   "requirements": ["requests>=2.31.0"],
   "version": "1.0.0",
-  "issue_tracker": "https://github.com/St3inberg/nasa-weather/issues"
+  "issue_tracker": "https://github.com/St3inberg/nasa-weather/issues",
+  "lovelace": {
+    "mode": "yaml",
+    "resources": [
+      {
+        "url": "/custom_components/nasa_mars_weather/lovelace/mars-weather-card.js",
+        "type": "module"
+      }
+    ]
+  }
 }

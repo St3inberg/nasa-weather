@@ -1,0 +1,42 @@
+# Example Home Assistant Dashboard with Mars Weather Card
+
+# Add this to your lovelace configuration or dashboard YAML
+
+type: vertical-stack
+cards:
+  - type: custom:mars-weather-card
+    entity: sensor.mars_avg_temperature
+    title: "Mars Weather Station"
+    show_stats: true
+    
+  - type: entities
+    title: "Mars Weather Sensors"
+    entities:
+      - entity: sensor.mars_avg_temperature
+        name: "Average Temperature"
+      - entity: sensor.mars_min_temperature
+        name: "Minimum Temperature"
+      - entity: sensor.mars_max_temperature
+        name: "Maximum Temperature"
+      - entity: sensor.mars_avg_pressure
+        name: "Average Pressure"
+      - entity: sensor.mars_avg_wind_speed
+        name: "Wind Speed"
+      - entity: sensor.mars_wind_direction
+        name: "Wind Direction"
+
+  - type: history-graph
+    entities:
+      - entity: sensor.mars_avg_temperature
+      - entity: sensor.mars_avg_pressure
+    title: "Mars Weather History"
+    hours_to_show: 48
+
+---
+
+# Alternative: Single Card View
+
+type: custom:mars-weather-card
+entity: sensor.mars_avg_temperature
+title: "Live Mars Weather"
+show_stats: true
