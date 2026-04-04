@@ -18,6 +18,44 @@ PLATFORMS = [Platform.SENSOR]
 SCAN_INTERVAL = timedelta(hours=1)
 
 
+def _normalize_mars_weather_payload(data: dict | None) -> dict | None:
+    """Normalize NASA payload across legacy and sol-key response formats."""
+    if not isinstance(data, dict):
+        return None
+
+    # Legacy format already exposes aggregated fields at top-level.
+    if "av_t" in data or "av_p" in data or "av_ws" in data:
+        return data
+
+    sol_keys = data.get("sol_keys")
+    if not isinstance(sol_keys, list) or not sol_keys:
+        return None
+
+    def _sol_sort_key(sol: str):
+        try:
+            return (0, int(sol))
+        except (TypeError, ValueError):
+            return (1, str(sol))
+
+    latest_sol = sorted(sol_keys, key=_sol_sort_key)[-1]
+    sol_data = data.get(latest_sol)
+    if not isinstance(sol_data, dict):
+        return None
+
+    normalized = {
+        "av_t": sol_data.get("AT") or sol_data.get("av_t") or {},
+        "av_p": sol_data.get("PRE") or sol_data.get("av_p") or {},
+        "av_ws": sol_data.get("HWS") or sol_data.get("av_ws") or {},
+        "wd": sol_data.get("WD") or sol_data.get("wd") or {},
+        "source_sol": latest_sol,
+    }
+
+    if not any(isinstance(normalized[key], dict) and normalized[key] for key in ("av_t", "av_p", "av_ws")):
+        return None
+
+    return normalized
+
+
 class MarsWeatherUpdateCoordinator(DataUpdateCoordinator):
     """Update coordinator for Mars weather data."""
 
@@ -50,10 +88,11 @@ class MarsWeatherUpdateCoordinator(DataUpdateCoordinator):
                 response.raise_for_status()
                 data = await response.json()
 
-            if not data or "av_t" not in data:
+            normalized = _normalize_mars_weather_payload(data)
+            if not normalized:
                 raise UpdateFailed("Invalid response from NASA API")
 
-            return data
+            return normalized
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise UpdateFailed(f"Error communicating with NASA API: {err}") from err
 

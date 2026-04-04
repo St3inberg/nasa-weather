@@ -12,6 +12,29 @@ _LOGGER = logging.getLogger(__name__)
 DOMAIN = "nasa_mars_weather"
 
 
+def _is_valid_mars_payload(data: dict | None) -> bool:
+    """Validate payload for both legacy and latest sol-key formats."""
+    if not isinstance(data, dict):
+        return False
+
+    if "av_t" in data or "av_p" in data or "av_ws" in data:
+        return True
+
+    sol_keys = data.get("sol_keys")
+    if not isinstance(sol_keys, list) or not sol_keys:
+        return False
+
+    latest_sol = sorted(
+        sol_keys,
+        key=lambda sol: (0, int(sol)) if str(sol).isdigit() else (1, str(sol)),
+    )[-1]
+    sol_data = data.get(latest_sol)
+    if not isinstance(sol_data, dict):
+        return False
+
+    return any(key in sol_data for key in ("AT", "PRE", "HWS", "av_t", "av_p", "av_ws"))
+
+
 class NasaMarsWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow"""
 
@@ -37,7 +60,7 @@ class NasaMarsWeatherConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     response.raise_for_status()
                     data = await response.json()
 
-                if not data or "av_t" not in data:
+                if not _is_valid_mars_payload(data):
                     errors["base"] = "invalid_response"
                 else:
                     return self.async_create_entry(title="NASA Mars Weather", data=user_input)
