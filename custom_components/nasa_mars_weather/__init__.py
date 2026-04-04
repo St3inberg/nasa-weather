@@ -1,12 +1,14 @@
 """NASA Mars Weather Integration for Home Assistant"""
 
+import asyncio
 import logging
 from datetime import timedelta
 
-import requests
+import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,16 +41,20 @@ class MarsWeatherUpdateCoordinator(DataUpdateCoordinator):
                 "api_key": self.api_key,
             }
 
-            # Use a session or requests library
-            response = requests.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            data = response.json()
+            session = async_get_clientsession(self.hass)
+            async with session.get(
+                url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as response:
+                response.raise_for_status()
+                data = await response.json()
 
             if not data or "av_t" not in data:
                 raise UpdateFailed("Invalid response from NASA API")
 
             return data
-        except requests.exceptions.RequestException as err:
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
             raise UpdateFailed(f"Error communicating with NASA API: {err}") from err
 
 
