@@ -1,229 +1,212 @@
 import { LitElement, html, css } from 'https://cdn.jsdelivr.net/gh/lit/lit@3/index.js';
 
+// Public domain NASA Mars surface photo (Curiosity rover, Gale Crater)
+const MARS_BG_IMAGE = 'https://mars.nasa.gov/system/resources/detail_files/25761_PIA25015-800.jpg';
+
 class MarsWeatherCard extends LitElement {
   static get properties() {
     return {
       hass: { type: Object },
       config: { type: Object },
-      data: { type: Object }
     };
   }
 
   setConfig(config) {
+    if (!config.entity) throw new Error('You must define an entity');
     this.config = config;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    this.updateData();
-    // Update every hour
-    setInterval(() => this.updateData(), 3600000);
+  _state(entityId) {
+    return this.hass?.states?.[entityId];
   }
 
-  updateData() {
-    if (!this.config || !this.config.entity) return;
-    this.requestUpdate();
-  }
-
-  getWeatherData() {
-    if (!this.hass || !this.config || !this.config.entity) return null;
-    return this.hass.states[this.config.entity];
+  _val(entityId) {
+    return this._state(entityId)?.state ?? 'N/A';
   }
 
   static get styles() {
     return css`
-      :host {
-        --mars-bg: linear-gradient(135deg, #c1440e 0%, #8b3a0c 50%, #4a1f05 100%);
-        --mars-dark: #3d1a04;
-        --mars-accent: #e67e22;
-      }
+      :host { display: block; }
 
       .card {
-        background: var(--mars-bg);
         border-radius: 12px;
-        padding: 24px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+        position: relative;
+        min-height: 320px;
         color: #fff;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        position: relative;
-        overflow: hidden;
-        min-height: 300px;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
+        justify-content: flex-end;
       }
 
-      .card::before {
-        content: '';
+      .bg {
         position: absolute;
-        top: 0;
-        right: -20%;
-        width: 300px;
-        height: 300px;
-        background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-        border-radius: 50%;
-        animation: float 6s ease-in-out infinite;
+        inset: 0;
+        background-image: var(--mars-bg-image, linear-gradient(135deg, #c1440e 0%, #4a1f05 100%));
+        background-size: cover;
+        background-position: center;
+        filter: brightness(0.75);
       }
 
-      @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-20px); }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 60%);
       }
 
       .content {
         position: relative;
         z-index: 2;
+        padding: 20px;
       }
 
       .header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-        flex-wrap: wrap;
-      }
-
-      .title {
-        font-size: 28px;
-        font-weight: bold;
-        margin: 0;
-        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-      }
-
-      .status {
-        font-size: 12px;
-        opacity: 0.9;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        background: rgba(255, 255, 255, 0.2);
-        padding: 4px 12px;
-        border-radius: 20px;
-      }
-
-      .weather-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 16px;
+        align-items: flex-end;
         margin-bottom: 16px;
       }
 
-      .weather-item {
-        background: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        border-radius: 8px;
-        padding: 16px;
-        backdrop-filter: blur(10px);
+      .title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 6px rgba(0,0,0,0.6);
       }
 
-      .weather-label {
-        font-size: 12px;
-        opacity: 0.8;
+      .sol {
+        font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 8px;
+        letter-spacing: 1px;
+        opacity: 0.8;
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.25);
+        padding: 3px 10px;
+        border-radius: 20px;
+        backdrop-filter: blur(4px);
       }
 
-      .weather-value {
-        font-size: 24px;
-        font-weight: bold;
-        color: var(--mars-accent);
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
       }
 
-      .weather-unit {
-        font-size: 14px;
-        opacity: 0.9;
-        margin-left: 4px;
+      .tile {
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        padding: 12px;
+        backdrop-filter: blur(8px);
+      }
+
+      .tile-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        opacity: 0.75;
+        margin-bottom: 6px;
+      }
+
+      .tile-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: #f5a623;
+      }
+
+      .tile-unit {
+        font-size: 12px;
+        opacity: 0.85;
+        margin-left: 2px;
       }
 
       .footer {
-        font-size: 11px;
-        opacity: 0.7;
-        margin-top: 16px;
+        margin-top: 12px;
+        font-size: 10px;
+        opacity: 0.55;
         text-align: center;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        padding-top: 12px;
       }
 
       .error {
-        background: rgba(220, 53, 69, 0.2);
-        border: 1px solid rgba(220, 53, 69, 0.5);
-        padding: 16px;
+        padding: 20px;
+        background: rgba(200,50,50,0.3);
         border-radius: 8px;
         text-align: center;
-      }
-
-      .planet-icon {
-        font-size: 48px;
-        margin-right: 16px;
       }
     `;
   }
 
   render() {
-    const state = this.getWeatherData();
-    
-    if (!state) {
+    const base = this.config.entity;
+    const mainState = this._state(base);
+
+    const bgImage = this.config.background_image || MARS_BG_IMAGE;
+
+    if (!mainState) {
       return html`
-        <div class="card">
-          <div class="content">
-            <div class="error">
-              Entity not found: ${this.config.entity}
+        <ha-card>
+          <div class="card" style="--mars-bg-image: url('${bgImage}')">
+            <div class="bg"></div>
+            <div class="overlay"></div>
+            <div class="content">
+              <div class="error">Entity not found: ${base}</div>
             </div>
           </div>
-        </div>
+        </ha-card>
       `;
     }
 
-    const temp = state.state || 'N/A';
-    const attributes = state.attributes || {};
-    const updated = attributes.updated_at || 'Unknown';
+    // Derive sibling entity IDs from the base entity
+    const domain = 'sensor';
+    const prefix = base.replace(/^sensor\.mars_/, '').replace(/_average$/, '');
+    const entities = {
+      temp:     `sensor.mars_avg_temperature`,
+      pressure: `sensor.mars_avg_pressure`,
+      wind:     `sensor.mars_avg_wind_speed`,
+      dir:      `sensor.mars_wind_direction`,
+    };
+
+    const temp     = mainState.state ?? 'N/A';
+    const pressure = this._val(this.config.pressure_entity   || entities.pressure);
+    const wind     = this._val(this.config.wind_entity       || entities.wind);
+    const dir      = this._val(this.config.direction_entity  || entities.dir);
+    const sol      = mainState.attributes?.source_sol;
 
     return html`
-      <div class="card">
-        <div class="content">
-          <div class="header">
-            <div style="display: flex; align-items: center;">
-              <span class="planet-icon">🔴</span>
-              <h2 class="title">Mars Weather</h2>
+      <ha-card>
+        <div class="card" style="--mars-bg-image: url('${bgImage}')">
+          <div class="bg"></div>
+          <div class="overlay"></div>
+          <div class="content">
+            <div class="header">
+              <h2 class="title">🔴 Mars Weather</h2>
+              ${sol ? html`<div class="sol">Sol ${sol}</div>` : ''}
             </div>
-            <div class="status">Live Data</div>
-          </div>
 
-          <div class="weather-grid">
-            <div class="weather-item">
-              <div class="weather-label">Temperature</div>
-              <div class="weather-value">
-                ${temp}
-                <span class="weather-unit">°C</span>
+            <div class="grid">
+              <div class="tile">
+                <div class="tile-label">Temperature</div>
+                <div class="tile-value">${temp}<span class="tile-unit">°C</span></div>
+              </div>
+              <div class="tile">
+                <div class="tile-label">Pressure</div>
+                <div class="tile-value">${pressure}<span class="tile-unit">Pa</span></div>
+              </div>
+              <div class="tile">
+                <div class="tile-label">Wind Speed</div>
+                <div class="tile-value">${wind}<span class="tile-unit">m/s</span></div>
+              </div>
+              <div class="tile">
+                <div class="tile-label">Wind Dir</div>
+                <div class="tile-value">${dir}</div>
               </div>
             </div>
-            <div class="weather-item">
-              <div class="weather-label">Pressure</div>
-              <div class="weather-value">
-                ${attributes.pressure || 'N/A'}
-                <span class="weather-unit">Pa</span>
-              </div>
-            </div>
-            <div class="weather-item">
-              <div class="weather-label">Wind Speed</div>
-              <div class="weather-value">
-                ${attributes.wind_speed || 'N/A'}
-                <span class="weather-unit">m/s</span>
-              </div>
-            </div>
-            <div class="weather-item">
-              <div class="weather-label">Wind Direction</div>
-              <div class="weather-value">
-                ${attributes.wind_direction || 'N/A'}
-              </div>
-            </div>
-          </div>
 
-          <div class="footer">
-            Last updated: ${updated} | Data from NASA InSight Mars Weather Service
+            <div class="footer">NASA InSight Mars Weather Service</div>
           </div>
         </div>
-      </div>
+      </ha-card>
     `;
   }
 }

@@ -1,16 +1,38 @@
 """Sensor platform for NASA Mars Weather integration."""
 
 import logging
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
-from homeassistant.const import UnitOfTemperature, UnitOfPressure
-from homeassistant.core import HomeAssistant, callback
+from dataclasses import dataclass
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfPressure, UnitOfTemperature
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.config_entries import ConfigEntry
 
 from . import DOMAIN, MarsWeatherUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+# Maps measurement names to their API field key
+_FIELD = {"average": "av", "min": "mn", "max": "mx"}
+
+
+@dataclass
+class _SensorSpec:
+    data_key: str
+    id_prefix: str
+    display_name: str
+    unit: str
+    device_class: SensorDeviceClass | None
+    precision: int
+
+
+_SPECS = [
+    _SensorSpec("av_t", "temp", "Temperature", UnitOfTemperature.CELSIUS, SensorDeviceClass.TEMPERATURE, 1),
+    _SensorSpec("av_p", "pressure", "Pressure", UnitOfPressure.PA, SensorDeviceClass.PRESSURE, 2),
+    _SensorSpec("av_ws", "wind_speed", "Wind Speed", "m/s", None, 2),
+]
 
 
 async def async_setup_entry(
@@ -22,33 +44,21 @@ async def async_setup_entry(
     coordinator: MarsWeatherUpdateCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     sensors = [
-        MarsTemperatureSensor(coordinator, "average"),
-        MarsTemperatureSensor(coordinator, "min"),
-        MarsTemperatureSensor(coordinator, "max"),
-        MarsPressureSensor(coordinator, "average"),
-        MarsPressureSensor(coordinator, "min"),
-        MarsPressureSensor(coordinator, "max"),
-        MarsWindSpeedSensor(coordinator, "average"),
-        MarsWindSpeedSensor(coordinator, "min"),
-        MarsWindSpeedSensor(coordinator, "max"),
-        MarsWindDirectionSensor(coordinator),
-    ]
+        MarsMeasurementSensor(coordinator, spec, measurement)
+        for spec in _SPECS
+        for measurement in ("average", "min", "max")
+    ] + [MarsWindDirectionSensor(coordinator)]
 
     async_add_entities(sensors)
 
 
-class MarsWeatherSensorBase(CoordinatorEntity):
+class MarsWeatherSensorBase(CoordinatorEntity, SensorEntity):
     """Base class for Mars weather sensors."""
 
-    def __init__(self, coordinator: MarsWeatherUpdateCoordinator, sensor_type: str = None):
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.sensor_type = sensor_type
-        self._attr_has_entity_name = True
+    _attr_has_entity_name = True
 
     @property
     def device_info(self):
-        """Return device info."""
         return {
             "identifiers": {(DOMAIN, "mars_weather")},
             "name": "Mars Weather",
@@ -56,152 +66,49 @@ class MarsWeatherSensorBase(CoordinatorEntity):
         }
 
 
-class MarsTemperatureSensor(MarsWeatherSensorBase):
-    """Sensor for Mars temperature."""
+class MarsMeasurementSensor(MarsWeatherSensorBase):
+    """Generic sensor for any numeric Mars weather measurement."""
 
-    def __init__(self, coordinator: MarsWeatherUpdateCoordinator, sensor_type: str):
-        """Initialize the sensor."""
-        super().__init__(coordinator, sensor_type)
-        self.sensor_type = sensor_type
-        self._attr_device_class = SensorDeviceClass.TEMPERATURE
-        self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
-    @property
-    def unique_id(self) -> str:
-        """Return unique id."""
-        return f"mars_temp_{self.sensor_type}"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        names = {
-            "average": "Temperature Average",
-            "min": "Temperature Min",
-            "max": "Temperature Max",
-        }
-        return names.get(self.sensor_type, "Temperature")
-
-    @property
-    def native_value(self) -> float:
-        """Return the state."""
-        if not self.coordinator.data:
-            return None
-
-        data = self.coordinator.data.get("av_t", {})
-        if self.sensor_type == "average":
-            return round(data.get("av"), 1) if data.get("av") is not None else None
-        elif self.sensor_type == "min":
-            return round(data.get("mn"), 1) if data.get("mn") is not None else None
-        elif self.sensor_type == "max":
-            return round(data.get("mx"), 1) if data.get("mx") is not None else None
-
-
-class MarsPressureSensor(MarsWeatherSensorBase):
-    """Sensor for Mars pressure."""
-
-    def __init__(self, coordinator: MarsWeatherUpdateCoordinator, sensor_type: str):
-        """Initialize the sensor."""
-        super().__init__(coordinator, sensor_type)
-        self.sensor_type = sensor_type
-        self._attr_device_class = SensorDeviceClass.PRESSURE
-        self._attr_native_unit_of_measurement = UnitOfPressure.PA
+    def __init__(
+        self,
+        coordinator: MarsWeatherUpdateCoordinator,
+        spec: _SensorSpec,
+        measurement: str,
+    ):
+        super().__init__(coordinator)
+        self._spec = spec
+        self._measurement = measurement
+        self._attr_device_class = spec.device_class
+        self._attr_native_unit_of_measurement = spec.unit
 
     @property
     def unique_id(self) -> str:
-        """Return unique id."""
-        return f"mars_pressure_{self.sensor_type}"
+        return f"mars_{self._spec.id_prefix}_{self._measurement}"
 
     @property
     def name(self) -> str:
-        """Return the name of the sensor."""
-        names = {
-            "average": "Pressure Average",
-            "min": "Pressure Min",
-            "max": "Pressure Max",
-        }
-        return names.get(self.sensor_type, "Pressure")
+        return f"{self._spec.display_name} {self._measurement.title()}"
 
     @property
-    def native_value(self) -> float:
-        """Return the state."""
+    def native_value(self) -> float | None:
         if not self.coordinator.data:
             return None
-
-        data = self.coordinator.data.get("av_p", {})
-        if self.sensor_type == "average":
-            return round(data.get("av"), 2) if data.get("av") is not None else None
-        elif self.sensor_type == "min":
-            return round(data.get("mn"), 2) if data.get("mn") is not None else None
-        elif self.sensor_type == "max":
-            return round(data.get("mx"), 2) if data.get("mx") is not None else None
-
-
-class MarsWindSpeedSensor(MarsWeatherSensorBase):
-    """Sensor for Mars wind speed."""
-
-    def __init__(self, coordinator: MarsWeatherUpdateCoordinator, sensor_type: str):
-        """Initialize the sensor."""
-        super().__init__(coordinator, sensor_type)
-        self.sensor_type = sensor_type
-
-    @property
-    def unique_id(self) -> str:
-        """Return unique id."""
-        return f"mars_wind_speed_{self.sensor_type}"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        names = {
-            "average": "Wind Speed Average",
-            "min": "Wind Speed Min",
-            "max": "Wind Speed Max",
-        }
-        return names.get(self.sensor_type, "Wind Speed")
-
-    @property
-    def native_unit_of_measurement(self) -> str:
-        """Return the unit of measurement."""
-        return "m/s"
-
-    @property
-    def native_value(self) -> float:
-        """Return the state."""
-        if not self.coordinator.data:
-            return None
-
-        data = self.coordinator.data.get("av_ws", {})
-        if self.sensor_type == "average":
-            return round(data.get("av"), 2) if data.get("av") is not None else None
-        elif self.sensor_type == "min":
-            return round(data.get("mn"), 2) if data.get("mn") is not None else None
-        elif self.sensor_type == "max":
-            return round(data.get("mx"), 2) if data.get("mx") is not None else None
+        val = self.coordinator.data.get(self._spec.data_key, {}).get(_FIELD[self._measurement])
+        return round(val, self._spec.precision) if val is not None else None
 
 
 class MarsWindDirectionSensor(MarsWeatherSensorBase):
-    """Sensor for Mars wind direction."""
+    """Sensor for Mars prevailing wind direction."""
+
+    unique_id = "mars_wind_direction"
+    name = "Wind Direction"
 
     def __init__(self, coordinator: MarsWeatherUpdateCoordinator):
-        """Initialize the sensor."""
         super().__init__(coordinator)
 
     @property
-    def unique_id(self) -> str:
-        """Return unique id."""
-        return "mars_wind_direction"
-
-    @property
-    def name(self) -> str:
-        """Return the name of the sensor."""
-        return "Wind Direction"
-
-    @property
-    def native_value(self) -> str:
-        """Return the state."""
+    def native_value(self) -> str | None:
         if not self.coordinator.data:
             return None
-
-        wd_data = self.coordinator.data.get("wd", {})
-        most_common = wd_data.get("most_common", {})
-        return most_common.get("compass_point", "Unknown")
+        most_common = (self.coordinator.data.get("wd") or {}).get("most_common") or {}
+        return most_common.get("compass_point")

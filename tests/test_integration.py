@@ -110,9 +110,7 @@ class TestIntegration:
             with open(sensor_path, "r") as f:
                 content = f.read()
             
-            assert "MarsTemperatureSensor" in content
-            assert "MarsPressureSensor" in content
-            assert "MarsWindSpeedSensor" in content
+            assert "MarsMeasurementSensor" in content
             assert "MarsWindDirectionSensor" in content
             assert "async_setup_entry" in content
         except Exception as e:
